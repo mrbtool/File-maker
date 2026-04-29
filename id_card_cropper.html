@@ -106,10 +106,10 @@
             justify-content: center;
             align-items: center;
         }
-        /* ADDED: Transition for rotation animation */
         canvas { 
             display: block; width: 100%; height: 100%; object-fit: contain; 
             transform-origin: center center;
+            cursor: default;
         }
         
         .empty-state {
@@ -132,7 +132,6 @@
         }
         .zoom-btn:active { background: #e2e8f0; transform: scale(0.95); }
 
-        /* ADDED: Rotate Button Specific Styles */
         .rotate-separator {
             width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px;
         }
@@ -166,6 +165,17 @@
         }
         .touchpad:active { background: #e2e8f0; border-color: var(--primary); color: var(--primary); }
 
+        /* Output Background Box */
+        .bg-settings-box {
+            background: var(--surface); border-radius: 12px; padding: 12px 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 10px;
+            display: none;
+        }
+        input[type="color"] { -webkit-appearance: none; appearance: none; width: 100%; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #e2e8f0; border-radius: 8px; }
+        .picking-mode { box-shadow: 0 0 0 2px var(--primary) !important; color: var(--primary) !important; }
+
         /* Info Section */
         .info-section {
             background: var(--surface);
@@ -178,11 +188,8 @@
         .info-section h3 { margin-top: 0; margin-bottom: 10px; font-size: 15px; color: var(--text); }
         .info-section ol { padding-left: 20px; color: var(--text-light); font-size: 13px; line-height: 1.6; margin-bottom: 15px; }
         .tutorial-img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            display: block;
+            width: 100%; height: auto; border-radius: 8px;
+            border: 1px solid #e2e8f0; display: block;
         }
 
         /* Bottom Action Bar */
@@ -276,7 +283,6 @@
         <input type="range" id="zoomSlider" min="0.1" max="3.0" step="0.01" value="1" oninput="manualZoom(this.value)">
         <button class="zoom-btn" onclick="adjustZoom(0.1)">+</button>
         
-        <!-- NEW: Rotate Controls -->
         <div class="rotate-separator"></div>
         <button class="zoom-btn" onclick="rotateImage()" title="Rotate 90°">
             <svg class="rotate-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,13 +304,34 @@
         </div>
     </div>
 
-    <!-- NEW: HOW TO USE SECTION -->
+    <!-- BACKGROUND SETTINGS -->
+    <div id="bgSettingsBox" class="bg-settings-box">
+        <div style="font-size:13px; font-weight:700; margin-bottom:12px; color:var(--text);">Output Background</div>
+        
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <span style="font-size:12px; font-weight:600; color:#64748b; width:45px;">Margin</span>
+            <input type="range" id="marginSlider" min="0" max="50" step="1" value="0" style="flex:1;" oninput="document.getElementById('marginVal').innerText = this.value + '%'">
+            <span id="marginVal" style="font-size:12px; font-weight:600; width:30px; text-align:right; color:var(--text);">0%</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:12px; font-weight:600; color:#64748b; width:45px;">Color</span>
+            <input type="color" id="bgColor" value="#ffffff" style="flex:1; height:34px; border:none; padding:0; background:none; cursor:pointer;">
+            <button id="pickBtn" class="mini-upload-btn" onclick="startColorPicker()" style="border-radius:8px; height:34px; border: 1px solid #e2e8f0; background: var(--surface);">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 2.293a2 2 0 012.828 0l4.879 4.879a2 2 0 010 2.828l-8.486 8.485M14 2.293L2 14.293V19h4.707l12-12M14 2.293L19 7.293M2 19h5l12-12"></path></svg> 
+                Pick
+            </button>
+        </div>
+    </div>
+
+    <!-- HOW TO USE SECTION -->
     <div class="info-section">
         <h3>How to Use</h3>
         <ol>
             <li><strong>Select Image:</strong> Tap the button to upload a photo of your ID card.</li>
             <li><strong>Choose Mode:</strong> Use <em>Standard</em> for straight photos or <em>Perspective</em> to fix tilted/angled photos.</li>
-            <li><strong>Adjust:</strong> In Perspective mode, drag the corners to match the ID card edges. Use the touchpad for precision.</li>
+            <li><strong>Adjust:</strong> Drag the frame or corners to match the ID card bounds.</li>
+            <li><strong>Background:</strong> Optionally pick a color and margin to beautifully pad your output.</li>
             <li><strong>Save:</strong> Click "Crop & Save" to download your clean image.</li>
         </ol>
         <img src="https://raw.githubusercontent.com/mrbtool/File-maker/refs/heads/main/Picsart_26-01-28_00-35-29-724.jpg" alt="Example of how to use" class="tutorial-img">
@@ -353,15 +380,15 @@
     let img = new Image();
     let imgLoaded = false;
     let canvasW, canvasH;
-    let isRotationAnim = false; // Flag to prevent double clicks during animation
+    let isRotationAnim = false;
 
     // Standard Mode State
     let stdState = { x: 0, y: 0, scale: 1, lastX: 0, lastY: 0, initialDist: 0, initialScale: 1 };
     
     // Perspective Mode State
     let lastPerspZoom = 1.0;
-    let imgDisplayRect = { x:0, y:0, w:0, h:0, scale:1 }; // Represents current screen draw rect
-    let corners = []; // Represents current screen corner positions
+    let imgDisplayRect = { x:0, y:0, w:0, h:0, scale:1 }; 
+    let corners =[]; 
 
     let cropBox = { w: 0, h: 0, x: 0, y: 0 };
     let isDragging = false;
@@ -370,9 +397,40 @@
     
     // Drag/Touch Vars
     let lastX = 0, lastY = 0;
+    let activeCorner = -1; 
+    let activeRemoteCorner = -1; 
+    let isPickingColor = false; // Background Eyedropper
 
-    let activeCorner = -1; // For Canvas touch
-    let activeRemoteCorner = -1; // For Touchpad
+    // --- Utility Methods ---
+    function rgbToHex(r, g, b) {
+        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+    }
+    
+    function hexToRgb(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : {r: 255, g: 255, b: 255};
+    }
+
+    async function startColorPicker() {
+        if (!imgLoaded) return;
+        if (window.EyeDropper) {
+            try {
+                const dropper = new EyeDropper();
+                const result = await dropper.open();
+                document.getElementById('bgColor').value = result.sRGBHex;
+            } catch (e) { /* User canceled */ }
+        } else {
+            // Fallback: Pick from canvas
+            isPickingColor = true;
+            canvas.style.cursor = 'crosshair';
+            document.getElementById('pickBtn').classList.add('picking-mode');
+            alert("Tap anywhere on the image to pick a color.");
+        }
+    }
 
     // --- Mode Switching ---
     function setMode(mode) {
@@ -389,11 +447,9 @@
             presetBar.classList.add('hidden'); 
             ftControls.style.display = 'flex';
             
-            // Reset remote selection
             activeRemoteCorner = -1;
             updateRemoteButtons();
             
-            // Reset Zoom Slider for perspective
             if(imgLoaded) {
                 initPerspective();
                 draw();
@@ -423,7 +479,6 @@
     img.onload = function() {
         imgLoaded = true;
         
-        // Reset Visual Rotation Properties when image loads
         canvas.style.transition = 'none';
         canvas.style.transform = 'none';
         isRotationAnim = false;
@@ -431,6 +486,8 @@
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('editorContainer').style.display = 'flex';
         document.getElementById('zoomBox').style.display = 'flex';
+        document.getElementById('bgSettingsBox').style.display = 'block';
+        
         setMode(appMode);
         const btn = document.getElementById('cropBtn');
         btn.classList.add('ready');
@@ -470,11 +527,9 @@
 
     function initPerspective() {
         initCanvas();
-        // Reset Zoom Tracker
         lastPerspZoom = 1.0;
         document.getElementById('zoomSlider').value = 1.0;
 
-        // Calculate initial Fit
         const scale = Math.min(canvasW/img.width, canvasH/img.height) * 0.8;
         const w = img.width * scale;
         const h = img.height * scale;
@@ -483,8 +538,7 @@
 
         imgDisplayRect = { x, y, w, h, scale };
 
-        // 0:TL, 1:TR, 2:BR, 3:BL
-        corners = [
+        corners =[
             {x: x, y: y},
             {x: x + w, y: y},
             {x: x + w, y: y + h},
@@ -516,7 +570,6 @@
             ctx.save();
             ctx.translate(stdState.x, stdState.y);
             ctx.scale(stdState.scale, stdState.scale);
-            // High quality smoothing for display
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, -img.width / 2, -img.height / 2);
@@ -538,14 +591,12 @@
             ctx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
             
         } else {
-            // Perspective Mode
             ctx.save();
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, imgDisplayRect.x, imgDisplayRect.y, imgDisplayRect.w, imgDisplayRect.h);
             ctx.restore();
 
-            // Connect lines
             ctx.beginPath();
             ctx.moveTo(corners[0].x, corners[0].y);
             ctx.lineTo(corners[1].x, corners[1].y);
@@ -558,7 +609,6 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Draw Corners
             if (activeRemoteCorner === -1) {
                 corners.forEach((c, i) => {
                     ctx.beginPath();
@@ -575,7 +625,6 @@
                     ctx.fillText(i+1, c.x, c.y);
                 });
             } else {
-                // Crosshair for remote
                 const c = corners[activeRemoteCorner];
                 const size = 20;
                 ctx.strokeStyle = '#ef4444';
@@ -589,8 +638,6 @@
     }
 
     // --- Interaction ---
-    function getDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
-
     canvas.addEventListener('mousedown', e => startInput(e.clientX, e.clientY));
     canvas.addEventListener('touchstart', e => {
         if(e.touches.length === 1) startInput(e.touches[0].clientX, e.touches[0].clientY);
@@ -598,7 +645,6 @@
 
     window.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
     canvas.addEventListener('touchmove', e => {
-        e.preventDefault();
         if(e.touches.length === 1) moveInput(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive:false});
 
@@ -609,6 +655,18 @@
         const rect = canvas.getBoundingClientRect();
         const cx = x - rect.left;
         const cy = y - rect.top;
+
+        // Color Picker Fallback Logic
+        if (isPickingColor) {
+            const dpr = window.devicePixelRatio || 1;
+            const pixel = ctx.getImageData(cx * dpr, cy * dpr, 1, 1).data;
+            document.getElementById('bgColor').value = rgbToHex(pixel[0], pixel[1], pixel[2]);
+            
+            isPickingColor = false;
+            canvas.style.cursor = 'default';
+            document.getElementById('pickBtn').classList.remove('picking-mode');
+            return;
+        }
         
         lastX = x; lastY = y;
 
@@ -616,29 +674,26 @@
             isDragging = true;
             stdState.lastX = x; stdState.lastY = y;
         } else {
-            // Perspective Input
             let minDist = 40; 
             activeCorner = -1;
             
-            // Check if touching a corner
             corners.forEach((c, i) => {
                 const d = Math.hypot(c.x - cx, c.y - cy);
                 if (d < minDist) { minDist = d; activeCorner = i; }
             });
 
             if (activeCorner !== -1) {
-                // Touched a corner -> Drag corner
                 activeRemoteCorner = -1;
                 updateRemoteButtons();
                 draw();
             } else {
-                // Touched empty space -> Pan the image
                 isPanningPersp = true;
             }
         }
     }
 
     function moveInput(x, y) {
+        if (isPickingColor) return;
         const rect = canvas.getBoundingClientRect();
         
         if (appMode === 'standard' && isDragging) {
@@ -650,7 +705,6 @@
         } 
         else if (appMode === 'perspective') {
             if (activeCorner !== -1) {
-                // Moving a corner
                 let cx = x - rect.left;
                 let cy = y - rect.top;
                 cx = Math.max(0, Math.min(canvasW, cx));
@@ -658,20 +712,11 @@
                 corners[activeCorner] = {x: cx, y: cy};
                 draw();
             } else if (isPanningPersp) {
-                // Panning the whole view
                 const dx = x - lastX;
                 const dy = y - lastY;
-                
-                // Move image rect
                 imgDisplayRect.x += dx;
                 imgDisplayRect.y += dy;
-                
-                // Move all corners
-                corners.forEach(c => {
-                    c.x += dx;
-                    c.y += dy;
-                });
-                
+                corners.forEach(c => { c.x += dx; c.y += dy; });
                 lastX = x; lastY = y;
                 draw();
             }
@@ -686,32 +731,25 @@
         if(appMode === 'standard') alignMsg.style.opacity = 0;
     }
 
-    // --- Zoom Logic ---
+    // --- Zoom & Rotate ---
     function manualZoom(val) {
         const newVal = parseFloat(val);
         
         if (appMode === 'standard') {
             stdState.scale = newVal;
         } else {
-            // Perspective Zoom Logic
-            // Calculate ratio change based on previous slider value
             const ratio = newVal / lastPerspZoom;
             lastPerspZoom = newVal;
 
-            // Zoom Center = Canvas Center
             const cx = canvasW / 2;
             const cy = canvasH / 2;
 
-            // Scale Image Rect relative to Center
             imgDisplayRect.x = cx + (imgDisplayRect.x - cx) * ratio;
             imgDisplayRect.y = cy + (imgDisplayRect.y - cy) * ratio;
             imgDisplayRect.w *= ratio;
             imgDisplayRect.h *= ratio;
-            
-            // Update scale factor (vital for crop calc)
             imgDisplayRect.scale *= ratio;
 
-            // Scale Corners relative to Center
             corners.forEach(c => {
                 c.x = cx + (c.x - cx) * ratio;
                 c.y = cy + (c.y - cy) * ratio;
@@ -729,21 +767,15 @@
         manualZoom(newVal);
     }
 
-    // --- Rotate Logic (NEW) ---
     function rotateImage() {
         if (!imgLoaded || isRotationAnim) return;
         isRotationAnim = true;
 
-        // 1. Smooth Visual Animation
-        // We use CSS transition to rotate the canvas element
         canvas.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         canvas.style.transform = 'rotate(90deg)';
 
-        // 2. Physical Rotation after animation completes
         setTimeout(() => {
-            // Create an offscreen canvas to perform the rotation
             const offCanvas = document.createElement('canvas');
-            // Swap width and height for 90 degree rotation
             offCanvas.width = img.height;
             offCanvas.height = img.width;
             
@@ -751,17 +783,12 @@
             offCtx.imageSmoothingEnabled = true;
             offCtx.imageSmoothingQuality = 'high';
             
-            // Move origin to center, rotate, draw image offset by half size
             offCtx.translate(offCanvas.width / 2, offCanvas.height / 2);
             offCtx.rotate(90 * Math.PI / 180);
             offCtx.drawImage(img, -img.width / 2, -img.height / 2);
 
-            // Update source image with the rotated version
-            // This triggers img.onload, which resets the state and clears the CSS transform
             img.src = offCanvas.toDataURL('image/jpeg', 1.0);
-            
-            // isRotationAnim set to false in img.onload
-        }, 300); // Wait for 300ms CSS transition
+        }, 300); 
     }
 
     // --- Remote Control Logic ---
@@ -839,61 +866,75 @@
         }
     }
 
-    // UPDATED: High Quality Standard Crop
+    function applyBackgroundAndExport(sourceCvs) {
+        const marginPct = parseInt(document.getElementById('marginSlider').value, 10);
+        const bgColor = document.getElementById('bgColor').value;
+        
+        if (marginPct === 0) {
+            displayResult(sourceCvs.toDataURL('image/jpeg', 1.0));
+            return;
+        }
+
+        const marginPx = Math.round(Math.max(sourceCvs.width, sourceCvs.height) * (marginPct / 100));
+        const finalCvs = document.createElement('canvas');
+        finalCvs.width = sourceCvs.width + marginPx * 2;
+        finalCvs.height = sourceCvs.height + marginPx * 2;
+        
+        const finalCtx = finalCvs.getContext('2d');
+        
+        // Fill background
+        finalCtx.fillStyle = bgColor;
+        finalCtx.fillRect(0, 0, finalCvs.width, finalCvs.height);
+        
+        // Draw centered cropped image
+        finalCtx.drawImage(sourceCvs, marginPx, marginPx);
+        
+        displayResult(finalCvs.toDataURL('image/jpeg', 1.0));
+    }
+
     function cropStandard() {
-        // 1. Calculate the offset of the Image Top-Left relative to the Canvas Center
-        // stdState.x, stdState.y is where the center of the image is on screen
         const imgTLx = stdState.x - (img.width * stdState.scale) / 2;
         const imgTLy = stdState.y - (img.height * stdState.scale) / 2;
 
-        // 2. Map the screen's cropBox coordinates back to the original image pixels
-        // (cropBox.x - imgTLx) gives the distance in "zoomed screen pixels"
-        // Divide by stdState.scale to get "original image pixels"
         const sourceX = (cropBox.x - imgTLx) / stdState.scale;
         const sourceY = (cropBox.y - imgTLy) / stdState.scale;
         
-        // Map the dimensions
         const sourceW = cropBox.w / stdState.scale;
         const sourceH = cropBox.h / stdState.scale;
 
-        // 3. Create canvas with exact dimensions of the selected area (1:1 Resolution)
         const cvs = document.createElement('canvas');
         cvs.width = sourceW;
         cvs.height = sourceH;
         
-        const ctx = cvs.getContext('2d');
-        // Ensure best interpolation
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
+        const tmpCtx = cvs.getContext('2d');
         
-        // Draw the slice
-        ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sourceW, sourceH);
+        // In case image bounds are smaller than crop area, fill with selected background color
+        tmpCtx.fillStyle = document.getElementById('bgColor').value;
+        tmpCtx.fillRect(0, 0, sourceW, sourceH);
         
-        // Export at 1.0 (Maximum Quality)
-        displayResult(cvs.toDataURL('image/jpeg', 1.0));
+        tmpCtx.imageSmoothingEnabled = true;
+        tmpCtx.imageSmoothingQuality = 'high';
+        tmpCtx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sourceW, sourceH);
+        
+        applyBackgroundAndExport(cvs);
     }
 
-    // UPDATED: High Quality Perspective Crop
     function cropPerspective() {
         const sortedByY = [...corners].sort((a,b) => a.y - b.y);
         const topRow = sortedByY.slice(0, 2).sort((a,b) => a.x - b.x); 
         const botRow = sortedByY.slice(2, 4).sort((a,b) => a.x - b.x); 
         const orderedCorners = [topRow[0], topRow[1], botRow[1], botRow[0]];
 
-        // Calculate source corners relative to the ORIGINAL image
-        // We divide by imgDisplayRect.scale to un-zoom the coordinates
         const srcCorners = orderedCorners.map(c => ({
             x: (c.x - imgDisplayRect.x) / imgDisplayRect.scale,
             y: (c.y - imgDisplayRect.y) / imgDisplayRect.scale
         }));
 
-        // Calculate actual pixel distances in the original image
         const wTop = Math.hypot(srcCorners[1].x - srcCorners[0].x, srcCorners[1].y - srcCorners[0].y);
         const wBot = Math.hypot(srcCorners[2].x - srcCorners[3].x, srcCorners[2].y - srcCorners[3].y);
         const hLeft = Math.hypot(srcCorners[3].x - srcCorners[0].x, srcCorners[3].y - srcCorners[0].y);
         const hRight = Math.hypot(srcCorners[2].x - srcCorners[1].x, srcCorners[2].y - srcCorners[1].y);
         
-        // Set output canvas to the maximum detected resolution
         const outW = Math.round(Math.max(wTop, wBot));
         const outH = Math.round(Math.max(hLeft, hRight));
 
@@ -913,6 +954,8 @@
         const srcBuf = srcData.data;
         const sw = srcData.width;
         const sh = srcData.height;
+
+        const bgRgb = hexToRgb(document.getElementById('bgColor').value);
 
         for (let y = 0; y < outH; y++) {
             for (let x = 0; x < outW; x++) {
@@ -938,26 +981,29 @@
                     }
                     dstBuf[dstIdx+3] = 255; 
                 } else {
+                    // Fill empty perspective corners with user's background color
+                    dstBuf[dstIdx]   = bgRgb.r; 
+                    dstBuf[dstIdx+1] = bgRgb.g; 
+                    dstBuf[dstIdx+2] = bgRgb.b; 
                     dstBuf[dstIdx+3] = 255; 
-                    dstBuf[dstIdx] = dstBuf[dstIdx+1] = dstBuf[dstIdx+2] = 255; 
                 }
             }
         }
         outCtx.putImageData(outData, 0, 0);
         document.getElementById('loadingIndicator').style.display = 'none';
         document.getElementById('resultContent').style.display = 'block';
-        // Export at 1.0 (Maximum Quality)
-        displayResult(outCvs.toDataURL('image/jpeg', 1.0));
+        
+        applyBackgroundAndExport(outCvs);
     }
 
     function getHomographyMatrix(sw, sh, src, dw, dh) {
-        const pts = [
+        const pts =[
             {xd:0, yd:0, xs:src[0].x, ys:src[0].y},
             {xd:dw, yd:0, xs:src[1].x, ys:src[1].y},
             {xd:dw, yd:dh, xs:src[2].x, ys:src[2].y},
             {xd:0, yd:dh, xs:src[3].x, ys:src[3].y}
         ];
-        let A = [];
+        let A =[];
         for(let i=0; i<4; i++) {
             let p = pts[i];
             A.push([p.xd, p.yd, 1, 0, 0, 0, -p.xd*p.xs, -p.yd*p.xs, p.xs]);
