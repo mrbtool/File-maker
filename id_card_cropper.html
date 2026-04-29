@@ -99,7 +99,6 @@
             background: #1e293b; border-radius: var(--radius); overflow: hidden;
             position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             margin-bottom: 10px; display: none; touch-action: none;
-            /* Max height 45% of viewport */
             max-height: 45vh; 
             width: 100%;
             display: flex; 
@@ -215,7 +214,7 @@
             opacity: 0; transition: opacity 0.2s;
         }
 
-        /* Modal */
+        /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
@@ -224,7 +223,7 @@
         .modal-overlay.active { display: flex; }
         .modal-box {
             background: white; width: 85%; max-width: 350px;
-            border-radius: 20px; padding: 20px; text-align: center;
+            border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
         .result-img { max-width: 100%; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 15px; max-height: 50vh; object-fit: contain; }
         .btn-secondary {
@@ -360,6 +359,18 @@
     </div>
 </div>
 
+<!-- Custom Dialog Alert -->
+<div id="customAlertDialog" class="modal-overlay" style="z-index: 200;">
+    <div class="modal-box" style="padding: 25px 20px; max-width: 280px;">
+        <div style="color: var(--primary); margin-bottom: 15px;">
+            <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin: 0 auto; display: block;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h3 style="margin: 0 0 10px 0; font-size: 18px; color: var(--text);">Notice</h3>
+        <p id="customAlertMessage" style="font-size: 14px; color: #64748b; margin: 0 0 20px 0; line-height: 1.5;"></p>
+        <button class="crop-btn ready" style="width: 100%;" onclick="closeCustomAlert()">Got it</button>
+    </div>
+</div>
+
 <script>
     // --- Config ---
     const PRESETS = {
@@ -401,6 +412,16 @@
     let activeRemoteCorner = -1; 
     let isPickingColor = false; // Background Eyedropper
 
+    // --- Custom Alert Logic ---
+    function showCustomAlert(message) {
+        document.getElementById('customAlertMessage').innerText = message;
+        document.getElementById('customAlertDialog').classList.add('active');
+    }
+
+    function closeCustomAlert() {
+        document.getElementById('customAlertDialog').classList.remove('active');
+    }
+
     // --- Utility Methods ---
     function rgbToHex(r, g, b) {
         return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
@@ -428,7 +449,7 @@
             isPickingColor = true;
             canvas.style.cursor = 'crosshair';
             document.getElementById('pickBtn').classList.add('picking-mode');
-            alert("Tap anywhere on the image to pick a color.");
+            showCustomAlert("Tap anywhere on the image to pick a color.");
         }
     }
 
