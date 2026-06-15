@@ -8,7 +8,7 @@
 
     // Set options for the top banner
     window.atOptions = {
-        'key' : 'c1d577c74875916be469e70c0be2a659',
+        'key' : 'd46a0466162d9d686c2105e5cc8020e4',
         'format' : 'iframe',
         'height' : 50,
         'width' : 320,
@@ -17,7 +17,7 @@
 
     var topScript = document.createElement('script');
     topScript.type = 'text/javascript';
-    topScript.src = 'https://summonteacherjunction.com/c1d577c74875916be469e70c0be2a659/invoke.js';
+    topScript.src = 'https://pl29734673.effectivecpmnetwork.com/54/a1/f5/54a1f547f9844852b37e5bb634d8e4c5.js';
 
     // Insert top ad below header
     var headerElement = document.querySelector('header');
