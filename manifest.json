@@ -1,6 +1,6 @@
 {
-  "name": "MRB Tools",
-  "short_name": "Mrbtools",
+  "name": "FileVaro",
+  "short_name": "FileVaro",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fc",
