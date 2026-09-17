@@ -18,7 +18,7 @@
     var topScript = document.createElement('script');
     topScript.type = 'text/javascript';
     topScript.src = 'https://pl29734673.effectivecpmnetwork.com/54/a1/f5/54a1f547f9844852b37e5bb634d8e4c5.js';
-
+<script>(function(s){s.dataset.zone='11823899',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
     // Insert top ad below header
     var headerElement = document.querySelector('header');
     if (headerElement) {
